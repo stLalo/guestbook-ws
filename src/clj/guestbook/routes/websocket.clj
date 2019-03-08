@@ -57,8 +57,6 @@
         (async/send! channel (encode-transit response)))))
   )
 
-
-
 (defn notify-clients! [channel msg]
   (handle-message! channel msg)
     )

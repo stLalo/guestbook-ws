@@ -5,18 +5,17 @@
             )
 )
 
+(defonce messageList (atom []))
 
-
-(defn get-messages [messageList]
+(defn get-messages []
   (GET "/messages"
     {:headers {"Accepts" "application/transit+json"}
      :handler #(reset! messageList (vec %))})
-   (.log js/console messageList)
   )
 
-(defn message-list [messages]
+(defn message-list []
   [:ul.content
-   (for [{:keys [timestamp message name]} @messages]
+   (for [{:keys [timestamp message name]} @messageList]
      ^{:key timestamp}
      [:li
       [:time (.toLocaleString timestamp)]
@@ -50,27 +49,25 @@
     )
 )
 
-
 (defn home-page []
-  (let [messageList (atom nil)]
-    (get-messages messageList)
-(fn []
+(get-messages)
   [:div.container
    [:div.row
     [:div.col
      [:h2 "Welcome to the Guestbook"]]]
    [:div.row
     [:div.col
-     [message-list messageList]]]
+     [message-list ]]]
    [:div.row
     [:div.col
-     [message-form]]]])
-    ))
+     [message-form]]]]
+)
 
-(defonce messages (atom []))
 
-(defn update-messages! [{:keys [message]}]
-  (swap! messages #(vec (take 10 (conj % message)))))
+
+(defn update-messages! [{:keys [name message timestamp]}]
+  (get-messages)
+  )
 
 (defn mount-components []
   (reagent/render-component [#'home-page] (.getElementById js/document "app")))
