@@ -1,9 +1,10 @@
 (ns guestbook.routes.websocket
     (:require [compojure.core :refer [GET defroutes wrap-routes]]
-            [clojure.tools.logging :as log]
-            [immutant.web.async :as async]
-            [struct.core :as st]
-            [guestbook.db.core :as db]))
+              [clojure.tools.logging :as log]
+              [immutant.web.async :as async]
+              [struct.core :as st]
+              [cognitect.transit :as transit]
+              [guestbook.db.core :as db]))
 
 
 
@@ -33,9 +34,34 @@
 
 (defonce channels (atom #{}))
 
+(defn encode-transit [message]
+  (let [out
+        (java.io.ByteArrayOutputStream. 4096)
+        writer (transit/writer out :json)]
+    (transit/write writer message)
+    (.toString out)))
+
+(defn decode-transit [message]
+  (let [in (java.io.ByteArrayInputStream. (.getBytes message))
+        reader (transit/reader in :json)]
+    (transit/read reader)))
+
+(defn handle-message! [channel message]
+  (let [response (-> message 
+                     decode-transit
+                     (assoc :timestamp (java.util.Date.))
+                     save-message! )]
+    (if (:errors response)
+      (async/send! channel (encode-transit response))
+      (doseq [channel @channels]
+        (async/send! channel (encode-transit response)))))
+  )
+
+
+
 (defn notify-clients! [channel msg]
-  (doseq [channel @channels]
-    (async/send! channel msg)))
+  (handle-message! channel msg)
+    )
 
 (defn connect! [channel]
   (log/info "channel open")

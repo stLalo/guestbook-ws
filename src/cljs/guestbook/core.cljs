@@ -5,20 +5,23 @@
             )
 )
 
-(defonce messages (atom []))
 
-(defn get-messages [messages]
+
+(defn get-messages [messageList]
   (GET "/messages"
     {:headers {"Accepts" "application/transit+json"}
-     :handler #(reset! messages (vec %))}
-    )
+     :handler #(reset! messageList (vec %))})
+   (.log js/console messageList)
   )
 
 (defn message-list [messages]
-  [:ul
-   (for [[i message] (map-indexed vector @messages)]
-     ^{:key i}
-     [:li message])])
+  [:ul.content
+   (for [{:keys [timestamp message name]} @messages]
+     ^{:key timestamp}
+     [:li
+      [:time (.toLocaleString timestamp)]
+      [:p message]
+      [:p " - " name]])])
 
 (defn message-form []
     (let [fieldValue (atom nil)]
@@ -49,17 +52,22 @@
 
 
 (defn home-page []
-    [:div.container
-        [:div.row
-            [:div.col
-                [:h2 "Welcome to the Guestbook"]]]
-        [:div.row
-            [:div.col
-             (get-messages messages)
-             [message-list messages]]]
-        [:div.row
-                [:div.col
-                    [message-form]]]])
+  (let [messageList (atom nil)]
+    (get-messages messageList)
+(fn []
+  [:div.container
+   [:div.row
+    [:div.col
+     [:h2 "Welcome to the Guestbook"]]]
+   [:div.row
+    [:div.col
+     [message-list messageList]]]
+   [:div.row
+    [:div.col
+     [message-form]]]])
+    ))
+
+(defonce messages (atom []))
 
 (defn update-messages! [{:keys [message]}]
   (swap! messages #(vec (take 10 (conj % message)))))
